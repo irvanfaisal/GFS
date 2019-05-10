@@ -1,17 +1,16 @@
 import netCDF4
-import pandas as pd
 import urllib3
 from bs4 import BeautifulSoup
 import csv
 
-workPath = '/home/wrfchem/test/experiment/other/GFS'
+workPath = 'pathToData'
 
 # Get Latest GFS Data Information
 
 url = 'http://thredds.ucar.edu/thredds/catalog/grib/NCEP/GFS/Global_0p25deg/latest.html'
 http = urllib3.PoolManager() 
 response = http.request('GET',url)
-soup = BeautifulSoup(response.data.decode('utf-8'))
+soup = BeautifulSoup(response.data.decode('utf-8'),'html.parser')
 filename = soup.body.find('a').text
 
 # Define Parameters to Download
@@ -59,7 +58,14 @@ nc = netCDF4.Dataset(dataPath,mode='r')
 
 lat = nc.variables['lat']
 lon = nc.variables['lon']
-time_var = nc.variables['time']
+try:
+    time_var = nc.variables['time']
+except:
+    try:
+        time_var = nc.variables['time1']
+    except:
+        time_var = nc.variables['time2']
+        pass
 dtime = netCDF4.num2date(time_var[:],time_var.units)
 temp = nc.variables['Temperature_height_above_ground']
 atemp = nc.variables['Apparent_temperature_height_above_ground']
@@ -75,7 +81,7 @@ rain = nc.variables['Total_precipitation_surface_Mixed_intervals_Accumulation']
 
 time = dtime[0:55]
 dataTemp = temp[1:56,0,:,:]
-dataAtemp = temp[1:56,0,:,:]
+dataAtemp = atemp[1:56,0,:,:]
 dataMax = max[0:55,0,:,:]
 dataMin = min[0:55,0,:,:]
 dataUwind = u[1:56,0,:,:]
@@ -105,8 +111,8 @@ csvHeader = [
 with open(workPath + '/latest.txt', 'w') as filehandle:  
     filehandle.write(filename[19:32])
 	
-with open(workPath + '/' + csvName, 'w') as csvFile:
-	writer = csv.writer(csvFile)
+with open(workPath + '/' + csvName, 'w', newline="") as csvFile:
+	writer = csv.writer(csvFile,delimiter=",")
 	writer.writerow([g for g in csvHeader]) 
 	for i, t in enumerate(time):
 		for j, y in enumerate(lat):
